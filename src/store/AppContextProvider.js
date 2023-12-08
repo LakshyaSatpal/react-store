@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AppContext from "./app-context";
-import initialProducts from "../data/products.json";
 
 const AppContextProvider = ({ children }) => {
   const [showCart, setShowCart] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [loading, setIsLoading] = useState(false);
 
   const [cartItems, setCartItems] = useState([]);
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState({});
 
   const openCart = () => setShowCart(true);
   const closeCart = () => setShowCart(false);
@@ -61,19 +61,59 @@ const AppContextProvider = ({ children }) => {
 
   const handleAddProduct = (productName) => {
     const product = {
-      id: products.length + 1,
+      id: Object.keys(products).length + 1,
       name: productName,
       image: "default_product.png",
     };
-    setProducts((state) => [...state, product]);
+    sendProductData(product);
+    setProducts((state) => {
+      return { ...state, [Object.keys(state).length + 1]: product };
+    });
     closeAddProduct();
   };
+
+  const sendProductData = async (product) => {
+    try {
+      await fetch(
+        "https://react-store-18b7a-default-rtdb.firebaseio.com/products.json",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(product),
+        }
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          "https://react-store-18b7a-default-rtdb.firebaseio.com/products.json"
+        );
+        const data = await response.json();
+        setProducts(data);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const appContextValue = {
     showCart,
     showAddProduct,
     products,
     cartItems,
+    loading,
     openCart,
     closeCart,
     openAddProduct,
